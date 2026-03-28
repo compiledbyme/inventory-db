@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Inventory Database Assignment
 
-## Getting Started
+This project fulfills the inventory database assignment using PostgreSQL, Prisma ORM, Next.js route handlers, and TypeScript.
 
-First, run the development server:
+## Requirements Coverage
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- `POST /supplier` creates a supplier
+- `POST /inventory` creates an inventory item
+- `GET /inventory` returns all inventory grouped by supplier and sorted by total inventory value
+- `GET /api/supplier` returns suppliers with their inventory items
+- `GET /api/inventory` returns raw inventory records and supports optional `supplierId` and `productName` filters
+- inventory validation ensures:
+  - the supplier exists
+  - `quantity >= 0`
+  - `price > 0`
+
+## Database Schema Explanation
+
+The application uses two SQL tables with a one-to-many relationship.
+
+### Suppliers
+
+- `id`: unique supplier identifier
+- `name`: supplier name
+- `city`: supplier city
+
+### Inventory
+
+- `id`: unique inventory identifier
+- `supplierId`: foreign key referencing the supplier
+- `productName`: product name
+- `quantity`: available stock quantity
+- `price`: unit price
+
+### Relationship
+
+One supplier can have many inventory items. Every inventory item belongs to exactly one supplier.
+
+## Why SQL Was Chosen
+
+SQL is the right choice for this assignment because the data is structured and relational:
+
+- suppliers and inventory have a clear one-to-many relationship
+- inventory must belong to a valid supplier, which is enforced with a foreign key
+- the required grouped query relies on aggregation and sorting, which SQL databases handle efficiently
+- PostgreSQL provides strong consistency for inventory data and predictable query behavior
+
+## API Endpoints
+
+### `POST /supplier`
+
+Creates a supplier.
+
+Example body:
+
+```json
+{
+  "name": "Bharat Tech Distributors",
+  "city": "Bengaluru"
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### `POST /inventory`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Creates an inventory item for an existing supplier.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Example body:
 
-## Learn More
+```json
+{
+  "supplierId": "supplier_id_here",
+  "productName": "Wireless Mouse",
+  "quantity": 180,
+  "price": 799
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+### `GET /inventory`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Returns all inventory grouped by supplier and sorted by total inventory value in descending order.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`totalValue = sum(quantity * price)` for each supplier
 
-## Deploy on Vercel
+Example response:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```json
+[
+  {
+    "supplierId": "supplier_id_here",
+    "supplierName": "Bharat Tech Distributors",
+    "city": "Bengaluru",
+    "inventory": [
+      {
+        "productName": "Wireless Mouse",
+        "quantity": 180,
+        "price": 799,
+        "value": 143820
+      }
+    ],
+    "totalValue": 143820
+  }
+]
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## One Indexing / Optimization Suggestion
+
+A useful optimization is to keep an index on `Inventory.supplierId`, because supplier-based lookups and grouped reporting depend on that column. If the dataset grows much larger, a next improvement would be caching or precomputing supplier totals so the grouped inventory report does not recalculate every total on each request.
+
+## Local Setup
+
+```bash
+npm install
+npx prisma migrate dev
+npm run prisma:seed
+npm run dev
+```
+
+Create a local `.env` file first:
+
+```bash
+cp .env.example .env
+```
+
+Required env vars:
+
+- `DATABASE_URL`: PostgreSQL connection string used by Prisma and the app
+
+Keep the real `.env` file private and only commit `.env.example` with placeholder values.
+
+## Tech Stack
+
+- PostgreSQL
+- Prisma ORM
+- Next.js
+- TypeScript
