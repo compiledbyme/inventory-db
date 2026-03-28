@@ -134,7 +134,9 @@ This app can be deployed to Vercel, but it needs a hosted PostgreSQL database. A
 ### Before Deploying
 
 - Create a hosted PostgreSQL database, for example on Neon, Supabase, Railway, or Vercel Postgres
-- Copy its connection string into the `DATABASE_URL` environment variable
+- For Supabase with Prisma on Vercel, use:
+  - `DATABASE_URL`: the Supavisor pooled connection string for runtime
+  - `DIRECT_URL`: the direct database connection string for Prisma CLI and migrations
 - Run production migrations against that hosted database:
 
 ```bash
@@ -146,6 +148,7 @@ npm run prisma:deploy
 - Framework Preset: `Next.js`
 - Build Command: `npm run vercel-build`
 - Environment Variable: `DATABASE_URL`
+- Environment Variable: `DIRECT_URL`
 
 ### Deploy Flow
 
